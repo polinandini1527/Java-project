@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Management System</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --primary: #126ca7;
+      --accent: #0ea5a0;
+      --danger: #d84343;
+      --text: #1f2937;
+      --muted: #64748b;
+      --border: #dbe3ef;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle at top right, #e6f2ff 0%, var(--bg) 50%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 20px rgba(16, 24, 40, 0.06);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.7rem;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 20px rgba(16, 24, 40, 0.06);
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin: 10px 0 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cfd8e8;
+      border-radius: 10px;
+      font-size: 0.95rem;
+    }
+
+    .btn-group {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-weight: 700;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+
+    .btn-add { background: var(--accent); }
+    .btn-update { background: var(--primary); }
+    .btn-delete { background: var(--danger); }
+    .btn-clear { background: #6b7280; }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .toolbar input {
+      flex: 1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #e8eef7;
+      text-align: left;
+      font-size: 0.94rem;
+    }
+
+    th {
+      background: #f3f8ff;
+      font-size: 0.86rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: #334155;
+    }
+
+    tr:hover {
+      background: #f7fbff;
+    }
+
+    tr.selected {
+      background: #e7f1ff;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 0.92rem;
+      min-height: 22px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Student Management System</h1>
+      <p class="subtitle">Deployable web frontend version for Vercel</p>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <label for="rollNo">Roll No</label>
+        <input id="rollNo" type="number" min="1" placeholder="e.g. 101" />
+
+        <label for="name">Name</label>
+        <input id="name" type="text" placeholder="Student name" />
+
+        <label for="branch">Branch</label>
+        <input id="branch" type="text" placeholder="e.g. CSE" />
+
+        <div class="btn-group">
+          <button class="btn-add" id="addBtn">Add Student</button>
+          <button class="btn-update" id="updateBtn">Update Selected</button>
+          <button class="btn-delete" id="deleteBtn">Delete Selected</button>
+          <button class="btn-clear" id="clearBtn">Clear</button>
+        </div>
+
+        <div class="status" id="status">Ready</div>
+      </section>
+
+      <section class="card">
+        <div class="toolbar">
+          <input id="search" type="text" placeholder="Search roll, name, or branch" />
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Roll No</th>
+              <th>Name</th>
+              <th>Branch</th>
+            </tr>
+          </thead>
+          <tbody id="studentRows"></tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const rollInput = document.getElementById("rollNo");
+    const nameInput = document.getElementById("name");
+    const branchInput = document.getElementById("branch");
+    const searchInput = document.getElementById("search");
+    const rowsEl = document.getElementById("studentRows");
+    const statusEl = document.getElementById("status");
+
+    const addBtn = document.getElementById("addBtn");
+    const updateBtn = document.getElementById("updateBtn");
+    const deleteBtn = document.getElementById("deleteBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    let students = [];
+    let selectedRollNo = null;
+
+    async function apiRequest(method, url, payload) {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: payload ? JSON.stringify(payload) : undefined
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || "Request failed");
+      }
+
+      return data;
+    }
+
+    async function fetchStudents() {
+      const data = await apiRequest("GET", "/api/students");
+      students = data.students || [];
+      renderTable();
+    }
+
+    function showStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.style.color = isError ? "#b91c1c" : "#64748b";
+    }
+
+    function clearForm() {
+      rollInput.value = "";
+      nameInput.value = "";
+      branchInput.value = "";
+      selectedRollNo = null;
+      renderTable();
+      showStatus("Ready");
+    }
+
+    function readForm() {
+      const rollNo = Number(rollInput.value.trim());
+      const name = nameInput.value.trim();
+      const branch = branchInput.value.trim();
+
+      if (!rollNo || rollNo < 1 || !name || !branch) {
+        showStatus("Fill all fields with valid values.", true);
+        return null;
+      }
+
+      return { rollNo, name, branch };
+    }
+
+    function renderTable() {
+      const query = searchInput.value.trim().toLowerCase();
+      rowsEl.innerHTML = "";
+
+      students.forEach((student) => {
+        const rowText = `${student.rollNo} ${student.name} ${student.branch}`.toLowerCase();
+        if (query && !rowText.includes(query)) return;
+
+        const tr = document.createElement("tr");
+        if (student.rollNo === selectedRollNo) tr.classList.add("selected");
+
+        tr.innerHTML = `<td>${student.rollNo}</td><td>${student.name}</td><td>${student.branch}</td>`;
+        tr.addEventListener("click", () => {
+          selectedRollNo = student.rollNo;
+          rollInput.value = student.rollNo;
+          nameInput.value = student.name;
+          branchInput.value = student.branch;
+          renderTable();
+          showStatus("Loaded selected student.");
+        });
+
+        rowsEl.appendChild(tr);
+      });
+
+      if (!rowsEl.children.length) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = '<td colspan="3" style="color:#64748b">No students found.</td>';
+        rowsEl.appendChild(tr);
+      }
+    }
+
+    addBtn.addEventListener("click", async () => {
+      try {
+        const student = readForm();
+        if (!student) return;
+
+        await apiRequest("POST", "/api/students", student);
+        await fetchStudents();
+        clearForm();
+        showStatus("Student added.");
+      } catch (error) {
+        showStatus(error.message, true);
+      }
+    });
+
+    updateBtn.addEventListener("click", async () => {
+      try {
+        if (selectedRollNo === null) {
+          showStatus("Select a student row first.", true);
+          return;
+        }
+
+        const student = readForm();
+        if (!student) return;
+
+        // Preserve identity by selected roll number; update only values.
+        student.rollNo = selectedRollNo;
+
+        await apiRequest("PUT", "/api/students", student);
+        await fetchStudents();
+        clearForm();
+        showStatus("Student updated.");
+      } catch (error) {
+        showStatus(error.message, true);
+      }
+    });
+
+    deleteBtn.addEventListener("click", async () => {
+      try {
+        if (selectedRollNo === null) {
+          showStatus("Select a student row first.", true);
+          return;
+        }
+
+        await apiRequest("DELETE", `/api/students?rollNo=${selectedRollNo}`);
+        await fetchStudents();
+        clearForm();
+        showStatus("Student deleted.");
+      } catch (error) {
+        showStatus(error.message, true);
+      }
+    });
+
+    clearBtn.addEventListener("click", clearForm);
+    searchInput.addEventListener("input", renderTable);
+
+    fetchStudents().catch((error) => {
+      showStatus(`API connection failed: ${error.message}`, true);
+    });
+  </script>
+</body>
+</html>
