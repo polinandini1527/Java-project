@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/index.java": {
+      "runtime": "vercel-java@0.0.7"
+    }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/index.java"
+    }
+  ]
+}
